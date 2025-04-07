@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Gemini Coding Chatbot</title>
+  <style>
+    body {
+      background-image: url("{{ url_for('static', filename='image.webp') }}");
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+      color: #fff;
+      font-family: Arial, sans-serif;
+      text-align: center;
+      margin: 0;
+      padding: 2rem;
+      backdrop-filter: brightness(0.4); /* Optional dark overlay */
+    }
+
+    h1 {
+      font-size: 2.5rem;
+    }
+
+    #chat-box {
+      width: 60%;
+      margin: 2rem auto;
+      padding: 1rem;
+      background: rgba(0, 0, 0, 0.6);
+      border-radius: 10px;
+      text-align: left;
+    }
+
+    #chat-box p {
+      margin: 0.5rem 0;
+    }
+
+    input[type="text"] {
+      width: 60%;
+      padding: 0.5rem;
+      border-radius: 8px;
+      border: none;
+    }
+
+    button {
+      padding: 0.5rem 1rem;
+      border-radius: 8px;
+      border: none;
+      background-color: #4285f4;
+      color: white;
+      margin-left: 0.5rem;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <h1>What will you build?</h1>
+  <p>Push Gemini to the limits of what AI can do using the Gemini API</p>
+
+  <div id="chat-box"></div>
+
+  <input type="text" id="user-input" placeholder="Type something..." />
+  <button onclick="sendMessage()">Send</button>
+
+  <script>
+    async function sendMessage() {
+      const userInput = document.getElementById("user-input");
+      const chatBox = document.getElementById("chat-box");
+
+      const userText = userInput.value;
+      if (!userText) return;
+
+      chatBox.innerHTML += `<p><strong>You:</strong> ${userText}</p>`;
+      userInput.value = "";
+
+      const response = await fetch("/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: userText })
+      });
+
+      const data = await response.json();
+
+      const reply = data.reply.trim();
+      if (reply.includes("\n")) {
+        chatBox.innerHTML += `<p><strong>Gemini:</strong></p><pre><code>${escapeHtml(reply)}</code></pre>`;
+      } else {
+        chatBox.innerHTML += `<p><strong>Gemini:</strong> ${reply}</p>`;
+      }
+
+      function escapeHtml(text) {
+        return text
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;");
+      }
+    }
+  </script>
+</body>
+</html>
