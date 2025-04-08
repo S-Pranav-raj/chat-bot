@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>A3I Coding Chatbot</title>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      height: 100%;
+      background-color: #f9f9f9;
+    }
+
+    body {
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      padding: 1.5rem;
+      text-align: center;
+      background: white;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    }
+
+    header h1 {
+      font-size: 2.5rem;
+      margin: 0;
+    }
+
+    main {
+      flex-grow: 1;
+      display: flex;
+      justify-content: center;
+      align-items: stretch;
+      padding: 1rem;
+    }
+
+    #chat-box {
+      width: 100%;
+      max-width: 800px;
+      background: white;
+      padding: 1.5rem;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+      overflow-y: auto;
+      height: calc(100vh - 210px);
+      scroll-behavior: smooth;
+    }
+
+    .message {
+      margin-bottom: 1.25rem;
+      display: flex;
+      gap: 0.75rem;
+    }
+
+    .message.user {
+      justify-content: flex-end;
+    }
+
+    .message.ai {
+      justify-content: flex-start;
+    }
+
+    .bubble {
+      padding: 1rem 1.25rem;
+      border-radius: 1rem;
+      max-width: 80%;
+      line-height: 1.5;
+      white-space: pre-wrap;
+    }
+
+    .user .bubble {
+      background-color: #007aff;
+      color: white;
+      border-bottom-right-radius: 0;
+    }
+
+    .ai .bubble {
+      background-color: #f1f1f1;
+      color: #111;
+      border-bottom-left-radius: 0;
+    }
+
+    .code-block {
+      position: relative;
+    }
+
+    .copy-btn {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      background: #007aff;
+      color: white;
+      border: none;
+      padding: 0.4rem 0.6rem;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      cursor: pointer;
+    }
+
+    footer {
+      width: 100%;
+      padding: 1rem 1.5rem;
+      background: white;
+      box-shadow: 0 -2px 8px rgba(0,0,0,0.05);
+      position: sticky;
+      bottom: 0;
+      display: flex;
+      justify-content: center;
+    }
+
+    #chat-input-container {
+      width: 100%;
+      max-width: 800px;
+      display: flex;
+      gap: 1rem;
+    }
+
+    input[type="text"] {
+      flex-grow: 1;
+      padding: 0.75rem 1rem;
+      border-radius: 10px;
+      border: 1px solid #ccc;
+      font-size: 1rem;
+    }
+
+    input[type="text"]:focus {
+      outline: none;
+      border-color: #007aff;
+    }
+
+    button {
+      background: #007aff;
+      border: none;
+      color: white;
+      font-size: 1rem;
+      padding: 0.75rem 1.5rem;
+      border-radius: 10px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background: #005bb5;
+    }
+
+    pre {
+      background: #2d2d2d;
+      color: #f8f8f2;
+      padding: 1rem;
+      border-radius: 10px;
+      overflow-x: auto;
+      font-size: 0.9rem;
+    }
+
+    @media (max-width: 768px) {
+      .bubble {
+        max-width: 100%;
+      }
+
+      #chat-input-container {
+        flex-direction: column;
+      }
+
+      button {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>A3I Coding Chatbot</h1>
+  </header>
+
+  <main>
+    <div id="chat-box"></div>
+  </main>
+
+  <footer>
+    <div id="chat-input-container">
+      <input type="text" id="user-input" placeholder="Type a message..." />
+      <button onclick="sendMessage()">Send</button>
+    </div>
+  </footer>
+
+  <script>
+    async function sendMessage() {
+      const userInput = document.getElementById("user-input");
+      const chatBox = document.getElementById("chat-box");
+
+      const userText = userInput.value.trim();
+      if (!userText) return;
+
+      chatBox.innerHTML += `
+        <div class="message user">
+          <div class="bubble">${escapeHtml(userText)}</div>
+        </div>
+      `;
+
+      userInput.value = "";
+
+      const response = await fetch("/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: userText })
+      });
+
+      const data = await response.json();
+      const reply = data.reply.trim();
+
+      const isCode = reply.includes("\n") || reply.includes("```");
+
+      if (isCode) {
+        const escaped = escapeHtml(reply);
+        chatBox.innerHTML += `
+          <div class="message ai">
+            <div class="bubble code-block">
+              <button class="copy-btn" onclick="copyToClipboard(this)">Copy</button>
+              <pre><code class="language-python">${escaped}</code></pre>
+            </div>
+          </div>
+        `;
+        Prism.highlightAll();
+      } else {
+        chatBox.innerHTML += `
+          <div class="message ai">
+            <div class="bubble">${escapeHtml(reply)}</div>
+          </div>
+        `;
+      }
+
+      chatBox.scrollTop = chatBox.scrollHeight;
+    }
+
+    function escapeHtml(text) {
+      return text
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;");
+    }
+
+    function copyToClipboard(btn) {
+      const code = btn.nextElementSibling.innerText;
+      navigator.clipboard.writeText(code).then(() => {
+        btn.innerText = "Copied!";
+        setTimeout(() => (btn.innerText = "Copy"), 2000);
+      });
+    }
+
+    document.getElementById("user-input").addEventListener("keydown", function(event) {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        sendMessage();
+      }
+    });
+  </script>
+</body>
+</html>
